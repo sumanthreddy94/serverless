@@ -1,7 +1,6 @@
 package com.myjava.functions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.util.JSONPObject;
 import com.google.cloud.functions.CloudEventsFunction;
 import com.myjava.functions.model.MailNotification;
 import com.sendgrid.*;
@@ -13,18 +12,11 @@ import org.hibernate.cfg.Configuration;
 import org.hibernate.criterion.Restrictions;
 import org.json.JSONObject;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Base64;
-import java.util.List;
 import java.util.Properties;
 
 public class SendVerifyMail implements CloudEventsFunction {
-
 
     private SessionFactory sessionFactory =null;
     @Override
@@ -54,17 +46,6 @@ public class SendVerifyMail implements CloudEventsFunction {
         }
     }
 
-    private Connection getConnection() throws Exception {
-        String user = System.getenv("MYSQL_APP_USER");
-        String password = System.getenv("MYSQL_APP_PASSWORD");
-        String host = System.getenv("MYSQL_APP_HOST");
-        try(Connection connection = DriverManager.getConnection(host, user, password)) {
-            return connection;
-        } catch (RuntimeException | SQLException e) {
-            throw new Exception(e.getMessage());
-        }
-    }
-
     private SessionFactory getSessionFactory() {
         Configuration configuration = new Configuration().configure("hibernate.cfg.xml");
         Properties properties =   configuration.getProperties();
@@ -80,20 +61,18 @@ public class SendVerifyMail implements CloudEventsFunction {
     private int sendEmail(MailNotification mailNotification) {
         String dns = System.getenv("DNS_NAME");
         String sendGridAPIKey= "RS";
-        String verifyLink = "http://"+dns.substring(0, dns.length() - 1)+":8030/users/verifyLink/'"+mailNotification.getUsername()+"'";
+        String verifyLink = "http://"+dns.substring(0, dns.length() - 1)+":8030/v1/users/verifyEmail/"+mailNotification.getUsername();
         String htmlContent = "<!DOCTYPE html>"
                 + "<html>"
                 + "<head>"
-                + "<title>This link expires in 2 minutes</title>"
+                + "<title>Please Verify your Webapp Account</title>"
                 + "</head>"
                 + "<body>"
-                + "<p>Hi, verify your webapp account</p>"
-                + "<p>Click <a href=\"" + verifyLink + "\">here</a> to verify your account.</p>"
-                + "<p>OR Please paste this link in browser: "+ verifyLink+" </p>"
+                + "<p>Please send verification request in browser: "+ verifyLink+" </p>"
                 + "</body>"
                 + "</html>";
         mailNotification.setMailVerifyLink(verifyLink);
-        Email from = new Email("anumula.su@northeastern.edu");
+        Email from = new Email("noreply@northeasternboston.org");
         String subject = "Webapp User verification";
         Email to = new Email(mailNotification.getUsername());
         Content content = new Content("text/html",htmlContent);
@@ -132,7 +111,6 @@ public class SendVerifyMail implements CloudEventsFunction {
             Timestamp twoMinutesAhead = new Timestamp(currentTimestamp.getTime() + twoMinutesInMillis + 3000);
             savedMailNotification.setMailExpireDate(twoMinutesAhead);
             session.update(savedMailNotification);
-            System.out.println("======================Update data=========================");
             session.getTransaction().commit();
         } catch (Exception e) {
             throw new RuntimeException("unable to save record: "+e.getMessage());
