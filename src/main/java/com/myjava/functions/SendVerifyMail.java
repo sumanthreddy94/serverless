@@ -61,7 +61,7 @@ public class SendVerifyMail implements CloudEventsFunction {
     private int sendEmail(MailNotification mailNotification) {
         String dns = System.getenv("DNS_NAME");
         String sendGridAPIKey= "RS";
-        String verifyLink = "https://"+dns.substring(0, dns.length() - 1)+":8030/v1/users/verifyEmail/"+mailNotification.getUsername();
+        String verifyLink = "https://"+dns.substring(0, dns.length() - 1)+"/v1/users/verifyEmail/"+mailNotification.getUsername();
         String htmlContent = "<!DOCTYPE html>"
                 + "<html>"
                 + "<head>"
